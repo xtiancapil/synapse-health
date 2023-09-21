@@ -39,7 +39,7 @@ namespace DeliveryNotifier.Services
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInfo($"Alert sent for delivered item: {item.Description}");
+                _logger.LogWarning($"Alert sent for delivered item: {item.Description}");
             }
             else
             {

@@ -3,6 +3,7 @@ using DeliveryNotifier.Models;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net.Http.Json;
+using System.Linq;
 
 namespace DeliveryNotifier.Services
 {
@@ -50,16 +51,13 @@ namespace DeliveryNotifier.Services
 
         public async Task ProcessOrder(Order order)
         {
-            foreach(var item in order.Items)
+            foreach (var item in order.Items?.Where(x => Constants.DELIVERED.Equals(x.Status, StringComparison.OrdinalIgnoreCase)))
             {
-                if(item.Status.Equals(Constants.DELIVERED, StringComparison.OrdinalIgnoreCase))
-                {
                     // there should be some mechanism for success here
                     // how do we account for failed alerts ? do we reprocess them?
                     // Do we only alert when delivery notification is 0?
                     await _alertService.Alert(item, order.OrderId);
                     item.DeliveryNotification++;
-                }
             }
         }
 
@@ -71,7 +69,7 @@ namespace DeliveryNotifier.Services
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInfo($"Updated order sent for processing: OrderId {order.OrderId}");
+                _logger.LogWarning($"Updated order sent for processing: OrderId {order.OrderId}");
             }
             else
             {
