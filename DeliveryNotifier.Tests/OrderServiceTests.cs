@@ -12,7 +12,6 @@ namespace DeliveryNotifier.Tests
     public class OrderServiceTests
     {
         private readonly Mock<ILogger> _loggerMock = new();
-        private readonly Mock<IHttpClientFactory> _httpClientFactoryMock = new();
         private readonly Mock<IAlertService> _alertServiceMock = new();
         private readonly MockHttpMessageHandler _mockedHandler = new();
 
@@ -30,7 +29,7 @@ namespace DeliveryNotifier.Tests
             _sut = new OrderService(
                 _loggerMock.Object,
                 Options.Create<Endpoints>(_opts),
-                _httpClientFactoryMock.Object,
+                new HttpClient(_mockedHandler),
                 _alertServiceMock.Object);
         }
 
@@ -39,14 +38,7 @@ namespace DeliveryNotifier.Tests
         {
             // Arrange
             _mockedHandler.When(_opts.OrdersUrl)
-                .Respond(HttpStatusCode.BadRequest);
-
-            _httpClientFactoryMock.Setup(x => x.CreateClient(_opts.OrdersUrl))
-                .Returns(new HttpClient(_mockedHandler)
-                {
-                    BaseAddress = new Uri(_opts.OrdersUrl)
-                });
-
+                .Respond(HttpStatusCode.BadRequest);            
 
             // Act
             var orders = await _sut.GetOrders();
@@ -75,12 +67,6 @@ namespace DeliveryNotifier.Tests
             // Arrange
             _mockedHandler.When(_opts.OrdersUrl)
                 .Respond("application/json", JsonConvert.SerializeObject(orders));
-
-            _httpClientFactoryMock.Setup(x => x.CreateClient(_opts.OrdersUrl))
-                .Returns(new HttpClient(_mockedHandler)
-                {
-                    BaseAddress = new Uri(_opts.OrdersUrl)
-                });
 
             // Act
             var retrievedOrders = await _sut.GetOrders();
@@ -117,7 +103,7 @@ namespace DeliveryNotifier.Tests
 
             // Arrange
             _alertServiceMock.Setup(x => x.Alert(It.IsAny<OrderItem>(), It.IsAny<Guid>()))
-                 .Returns(Task.CompletedTask);
+                 .Returns(Task.FromResult(true));
 
             // Act
             await _sut.ProcessOrder(order);
@@ -138,7 +124,7 @@ namespace DeliveryNotifier.Tests
             });
         }
 
-        [Fact(DisplayName = "UpdateOrder should call LogInfo on successful update for Order")]
+        [Fact(DisplayName = "UpdateOrder should call LogWarning on successful update for Order")]
         public async Task Test4()
         {
             // Arrange
@@ -164,19 +150,14 @@ namespace DeliveryNotifier.Tests
             _mockedHandler.When(_opts.UpdatesUrl)
                 .Respond(statusCode: HttpStatusCode.OK);
 
-            _httpClientFactoryMock.Setup(x => x.CreateClient(_opts.UpdatesUrl))
-                .Returns(new HttpClient(_mockedHandler)
-                {
-                    BaseAddress = new Uri(_opts.UpdatesUrl)
-                });
 
-            _loggerMock.Setup(x => x.LogInfo(It.IsAny<string>()));
+            _loggerMock.Setup(x => x.LogWarning(It.IsAny<string>()));
             
             // Act
             await _sut.UpdateOrder(order);
 
             // Assert
-            _loggerMock.Verify(x => x.LogInfo(It.IsAny<string>()), Times.Once());
+            _loggerMock.Verify(x => x.LogWarning(It.IsAny<string>()), Times.Once());
             _loggerMock.Verify(x => x.LogError(It.IsAny<string>()), Times.Never());
         }
 
@@ -206,19 +187,13 @@ namespace DeliveryNotifier.Tests
             _mockedHandler.When(_opts.UpdatesUrl)
                 .Respond(statusCode: HttpStatusCode.InternalServerError);
 
-            _httpClientFactoryMock.Setup(x => x.CreateClient(_opts.UpdatesUrl))
-                .Returns(new HttpClient(_mockedHandler)
-                {
-                    BaseAddress = new Uri(_opts.UpdatesUrl)
-                });
-
             _loggerMock.Setup(x => x.LogError(It.IsAny<string>()));
 
             // Act
             await _sut.UpdateOrder(order);
 
             // Assert
-            _loggerMock.Verify(x => x.LogInfo(It.IsAny<string>()), Times.Never());
+            _loggerMock.Verify(x => x.LogWarning(It.IsAny<string>()), Times.Never());
             _loggerMock.Verify(x => x.LogError(It.IsAny<string>()), Times.Once());
         }
     }

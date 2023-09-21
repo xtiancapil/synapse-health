@@ -28,10 +28,10 @@ namespace DeliveryNotifier.Tests
             _sut = new AlertService(
                 _loggerMock.Object,
                 Options.Create<Endpoints>(_opts),
-                _httpClientFactoryMock.Object);
+                new HttpClient(_mockedHandler));
         }
 
-        [Fact(DisplayName = "Alert should call LogInfo on successful publish of an alert")]
+        [Fact(DisplayName = "Alert should call LogWarning on successful publish of an alert")]
         public async Task Test1()
         {
             // Arrange
@@ -51,13 +51,13 @@ namespace DeliveryNotifier.Tests
                     BaseAddress = new Uri(_opts.NotificationsUrl)
                 });
 
-            _loggerMock.Setup(x => x.LogInfo(It.IsAny<string>()));
+            _loggerMock.Setup(x => x.LogWarning(It.IsAny<string>()));
 
             // Act
             await _sut.Alert(orderItem, guid);
 
             // Assert
-            _loggerMock.Verify(x => x.LogInfo(It.IsAny<string>()), Times.Once());
+            _loggerMock.Verify(x => x.LogWarning(It.IsAny<string>()), Times.Once());
             _loggerMock.Verify(x => x.LogError(It.IsAny<string>()), Times.Never());
         }
 
@@ -87,7 +87,7 @@ namespace DeliveryNotifier.Tests
             await _sut.Alert(orderItem, guid);
 
             // Assert
-            _loggerMock.Verify(x => x.LogInfo(It.IsAny<string>()), Times.Never());
+            _loggerMock.Verify(x => x.LogWarning(It.IsAny<string>()), Times.Never());
             _loggerMock.Verify(x => x.LogError(It.IsAny<string>()), Times.Once());
         }
     }

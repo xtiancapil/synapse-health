@@ -3,7 +3,6 @@ using DeliveryNotifier.Models;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net.Http.Json;
-using System.Linq;
 
 namespace DeliveryNotifier.Services
 {
@@ -18,25 +17,24 @@ namespace DeliveryNotifier.Services
     {
         private readonly ILogger _logger;
         private readonly Endpoints _endpoints;
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly HttpClient _client;
         private readonly IAlertService _alertService;
 
         public OrderService(
             ILogger logger,
             IOptions<Endpoints> endpoints,
-            IHttpClientFactory httpClientFactory,
+            HttpClient client,
             IAlertService alertService)
         {
             _logger = logger;
             _endpoints = endpoints.Value;
-            _httpClientFactory = httpClientFactory;
+            _client = client;
             _alertService = alertService;
         }
 
         public async Task<List<Order>> GetOrders()
         {
-            using var httpClient = _httpClientFactory.CreateClient(_endpoints.OrdersUrl);            
-            var response = await httpClient.GetAsync(_endpoints.OrdersUrl);
+            var response = await _client.GetAsync(_endpoints.OrdersUrl);
             if (response.IsSuccessStatusCode)
             {
                 var ordersData = await response.Content.ReadFromJsonAsync<List<Order>>();
@@ -51,21 +49,27 @@ namespace DeliveryNotifier.Services
 
         public async Task ProcessOrder(Order order)
         {
+            var errors = 0;
             foreach (var item in order.Items?.Where(x => Constants.DELIVERED.Equals(x.Status, StringComparison.OrdinalIgnoreCase)))
             {
-                    // there should be some mechanism for success here
-                    // how do we account for failed alerts ? do we reprocess them?
-                    // Do we only alert when delivery notification is 0?
-                    await _alertService.Alert(item, order.OrderId);
-                    item.DeliveryNotification++;
+                    // Keep track of the number of errors encountered when trying to alert.                    
+                    if(await _alertService.Alert(item, order.OrderId))
+                        item.DeliveryNotification++;
+                    else errors++;
+            }
+
+            if(errors > 0)
+            {
+                // we handle the errors here. We are opting to retry the entire object in the queue.
+                _logger.LogError($"Failed to send alerts for some items: OrderId: {order.OrderId}");
+                // implement Queue
             }
         }
 
         public async Task UpdateOrder(Order order)
         {
-            using var httpClient = _httpClientFactory.CreateClient(_endpoints.UpdatesUrl);
             var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync(_endpoints.UpdatesUrl, content);
+            var response = await _client.PostAsync(_endpoints.UpdatesUrl, content);
 
             if (response.IsSuccessStatusCode)
             {
@@ -73,6 +77,7 @@ namespace DeliveryNotifier.Services
             }
             else
             {
+                // TODO: Add queue
                 _logger.LogError($"Failed to send updated order for processing: OrderId {order.OrderId}");
             }
         }

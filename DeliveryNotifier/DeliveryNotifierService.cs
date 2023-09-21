@@ -16,19 +16,21 @@ namespace DeliveryNotifier
         }
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInfo("running!");
+            _logger.LogWarning("running!");
 
             var orders = await _orderService.GetOrders();
             foreach (var order in orders)
-            {
+            {                
                 await _orderService.ProcessOrder(order);
                 await _orderService.UpdateOrder(order);
-            }            
+            }
+
+            _logger.LogWarning("done!");
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInfo("stopping!");
+            _logger.LogWarning("stopping!");
             return Task.CompletedTask;
         }
     }
