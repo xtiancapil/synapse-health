@@ -1,3 +1,24 @@
+## Running the project
+
+The project is on .NET 6 LTS release. Visual Studio 2022.
+
+To mock the APIs, the project makes use of [Fake JSON Server](https://ttu.github.io/dotnet-fake-json-server/#/)
+Data was generated using [Mockaroo](https://mockaroo.com/)
+
+````
+# install as a global tool
+$ dotnet tool install --global FakeServer
+
+# Start the server in the same directory as 'data.json'
+$ fake-server --file data.json --urls http://localhost:57602
+````
+
+## Questions
+
+* What happens to the entire Order when the process fails to send an Alert for an item? 
+  * Even if there is an error, an Order update is still made.
+* 
+
 ## Synapse Tech assessment
 
 Thank you for taking the time to do the coding assessment here at Synapse Health. We look forward to your submission.

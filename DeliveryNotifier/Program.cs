@@ -1,6 +1,5 @@
 ﻿using DeliveryNotifier.Models;
 using DeliveryNotifier.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Polly;
@@ -20,16 +19,13 @@ namespace DeliveryNotifier
                     .Console()
                     .CreateLogger();
 
-            IHost host = BuildHost(args);
-            host.Run();
+            var host = BuildHost(args);
+            host.Run();            
         }
 
         public static IHost BuildHost(string[] args) =>
-            new HostBuilder()
-            .UseContentRoot(Directory.GetCurrentDirectory())
-            .ConfigureAppConfiguration(cfg => {                
-                cfg.AddJsonFile("appsettings.json");
-                })
+            Host.CreateDefaultBuilder()
+            
             .ConfigureServices((ctx, services) =>
             {
                 services.AddSingleton<IHostedService, DeliveryNotifierService>();

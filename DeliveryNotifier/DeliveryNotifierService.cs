@@ -4,34 +4,36 @@ using Microsoft.Extensions.Hosting;
 
 namespace DeliveryNotifier
 {
-    public class DeliveryNotifierService : IHostedService
+    public class DeliveryNotifierService : BackgroundService
     {
         private readonly ILogger _logger;
+        private readonly IHostApplicationLifetime _appLifeTime;
         private readonly IOrderService _orderService;
 
         public DeliveryNotifierService(ILogger logger,
+            IHostApplicationLifetime appLifetime,
             IOrderService orderService) {
             _logger = logger;
+            _appLifeTime = appLifetime;
             _orderService = orderService;
         }
-        public async Task StartAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogWarning("running!");
 
-            var orders = await _orderService.GetOrders();
-            foreach (var order in orders)
-            {                
-                await _orderService.ProcessOrder(order);
-                await _orderService.UpdateOrder(order);
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogWarning("Retrieving orders");
+
+                var orders = await _orderService.GetOrders();
+                await Parallel.ForEachAsync(orders, async (order, cts) =>
+                {
+                    await _orderService.ProcessOrder(order);
+                    await _orderService.UpdateOrder(order);
+                });
+
+                _logger.LogWarning("Finished processing orders. Sleeping for 5 seconds.");
+                await Task.Delay(5000);
             }
-
-            _logger.LogWarning("done!");
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogWarning("stopping!");
-            return Task.CompletedTask;
-        }
+        }        
     }
 }

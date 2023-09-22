@@ -41,7 +41,6 @@ namespace DeliveryNotifier.Services
                 return ordersData;
             }
 
-            // Change this to a logging framework
             _logger.LogError(Constants.ORDER_RETRIEVE_ERROR);
             return null;
 
@@ -60,9 +59,9 @@ namespace DeliveryNotifier.Services
 
             if(errors > 0)
             {
-                // we handle the errors here. We are opting to retry the entire object in the queue.
-                _logger.LogError($"Failed to send alerts for some items: OrderId: {order.OrderId}");
-                // implement Queue
+                // What should we do for failed attempts to send an alert?
+                // Do we want to re-process the entire order? 
+                _logger.LogError($"Failed to send alerts for some items: OrderId: {order.OrderId}");                
             }
         }
 
