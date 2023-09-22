@@ -16,8 +16,8 @@ $ fake-server --file data.json --urls http://localhost:57602
 ## Questions
 
 * What happens to the entire Order when the process fails to send an Alert for an item? 
-  * Even if there is an error, an Order update is still made.
-* 
+  * Even if there is an error, an Order update call is still made for alerts that were successful.
+* How do we keep track of the items we've processed?
 
 ## Synapse Tech assessment
 
